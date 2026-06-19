@@ -12,6 +12,8 @@ Patch or design a production-grade Solana transaction send/confirm flow.
    python3 scripts/scan_ts_transactions.py <repo> --format md
    ```
 
+   If installed into `.agents`, use `.agents/skills/solana-tx-landing/scripts/scan_ts_transactions.py`.
+
 4. Read only the references needed by the findings:
    - blockhash/confirmation issues: `skill/references/blockhash-and-confirmation.md`
    - RPC/retry issues: `skill/references/rpc-and-retry.md`
@@ -29,4 +31,3 @@ Patch or design a production-grade Solana transaction send/confirm flow.
 - The app has bounded resend or documented RPC retry behavior.
 - Expiry rebuilds and resigns instead of mutating signed transactions.
 - Priority fee and compute settings are intentional for production flows.
-

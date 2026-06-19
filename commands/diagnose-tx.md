@@ -22,12 +22,16 @@ Accept any of:
    python3 scripts/parse_simulation_logs.py <log-file> --format md
    ```
 
+   If installed into `.agents`, use `.agents/skills/solana-tx-landing/scripts/parse_simulation_logs.py`.
+
 4. If source is provided, run:
 
    ```bash
    python3 scripts/scan_ts_transactions.py <path> --format md
    python3 scripts/scan_anchor_compute.py <path> --format md
    ```
+
+   If installed into `.agents`, use the copies under `.agents/skills/solana-tx-landing/scripts/`.
 
 5. Reconstruct the transaction lifecycle:
    - blockhash fetch
@@ -44,4 +48,3 @@ Accept any of:
 - Treat `sendTransaction` success as final confirmation.
 - Recommend `skipPreflight: true` as a first-line fix.
 - Recommend indefinite retries after blockhash expiry.
-

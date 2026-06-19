@@ -40,23 +40,7 @@ fi
 OWNER_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 PUBLIC_URL="https://github.com/${OWNER_REPO}"
 
-python3 - "$PUBLIC_URL" <<'PY'
-from pathlib import Path
-import sys
-
-url = sys.argv[1]
-path = Path("SUBMISSION.md")
-text = path.read_text(encoding="utf-8")
-text = text.replace("TODO: Add the public GitHub URL after pushing this repository.", url)
-path.write_text(text, encoding="utf-8")
-PY
-
-if [[ -n "$(git status --short SUBMISSION.md)" ]]; then
-  git add SUBMISSION.md
-  git commit -m "Add public submission URL"
-fi
-
 git push -u origin main
 
 echo "Published: $PUBLIC_URL"
-echo "SUBMISSION.md contains the public repo URL."
+echo "Repo URL: $PUBLIC_URL"

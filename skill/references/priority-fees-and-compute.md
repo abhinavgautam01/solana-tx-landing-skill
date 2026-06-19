@@ -37,6 +37,23 @@ const instructions = [...computeIxs, ...appInstructions];
 
 Place compute-budget instructions before app instructions.
 
+For new `@solana/kit` codebases, use the kit compute-budget instruction factories and keep them before app instructions:
+
+```ts
+import {
+  appendTransactionMessageInstruction,
+  getSetComputeUnitLimitInstruction,
+  getSetComputeUnitPriceInstruction,
+  pipe,
+} from "@solana/kit";
+
+const messageWithBudget = pipe(
+  message,
+  (tx) => appendTransactionMessageInstruction(getSetComputeUnitLimitInstruction({ units: 320_000 }), tx),
+  (tx) => appendTransactionMessageInstruction(getSetComputeUnitPriceInstruction({ microLamports: 25_000 }), tx),
+);
+```
+
 ## Percentile Guidance
 
 - Background/non-urgent: p50 local fee sample.
@@ -56,4 +73,3 @@ Investigate these when simulation consumes unexpectedly high units:
 - Deserializing large accounts repeatedly
 - PDA derivation inside loops
 - Avoidable token account creation in user-critical transactions
-

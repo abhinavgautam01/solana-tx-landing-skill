@@ -105,6 +105,15 @@ def validate_scanners() -> None:
     if hardened_report["summary"]["total"] != 0:
         fail("Hardened TypeScript fixture should have no static findings")
 
+    kit = run(["python3", "scripts/scan_ts_transactions.py", "tests/fixtures/typescript/kit_v2.ts", "--format", "json"])
+    kit_report = json.loads(kit.stdout)
+    if kit_report["summary"]["total"] != 0:
+        fail("@solana/kit v2 fixture should have no static findings")
+
+    fix_plan = run(["python3", "scripts/scan_ts_transactions.py", "tests/fixtures/typescript", "--fix-plan"])
+    if "signature-only-confirmation" not in fix_plan.stdout or "lastValidBlockHeight" not in fix_plan.stdout:
+        fail("TypeScript scanner fix plan did not include expected remediation steps")
+
     logs = run(["python3", "scripts/parse_simulation_logs.py", "tests/fixtures/logs/simulation.log", "--format", "json"])
     log_categories = {finding["category"] for finding in json.loads(logs.stdout)["findings"]}
     for category in {"blockhash", "custom-program-error", "units-consumed"}:
@@ -128,9 +137,28 @@ def validate_installer() -> None:
     run(["bash", "-n", "scripts/publish_github.sh"])
     with tempfile.TemporaryDirectory(prefix="solana-tx-landing-install-") as tmp:
         run(["bash", "install.sh", "--agents", "--target", tmp, "-y"])
-        installed = Path(tmp) / ".agents" / "skills" / "solana-tx-landing" / "SKILL.md"
-        if not installed.exists():
+        skill_dir = Path(tmp) / ".agents" / "skills" / "solana-tx-landing"
+        if not (skill_dir / "SKILL.md").exists():
             fail("Installer did not copy skill/SKILL.md into .agents")
+        for script in {
+            "parse_simulation_logs.py",
+            "scan_anchor_compute.py",
+            "scan_ts_transactions.py",
+            "tx_landing_report.py",
+        }:
+            if not (skill_dir / "scripts" / script).exists():
+                fail(f"Installer did not copy runtime script: {script}")
+        installed_scan = run(
+            [
+                "python3",
+                str(skill_dir / "scripts" / "scan_ts_transactions.py"),
+                str(ROOT / "tests" / "fixtures" / "typescript" / "risky.ts"),
+                "--format",
+                "json",
+            ]
+        )
+        if "signature-only-confirmation" not in installed_scan.stdout:
+            fail("Installed TypeScript scanner did not run correctly")
     ok("Shell helper syntax and project-local install work")
 
 

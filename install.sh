@@ -8,6 +8,12 @@ INSTALL_AGENTS=1
 INSTALL_RULES=1
 AGENTS_MODE=0
 YES=0
+RUNTIME_SCRIPTS=(
+  parse_simulation_logs.py
+  scan_anchor_compute.py
+  scan_ts_transactions.py
+  tx_landing_report.py
+)
 
 usage() {
   cat <<'EOF'
@@ -80,6 +86,10 @@ fi
 
 mkdir -p "$TARGET_BASE/skills/solana-tx-landing"
 cp -R "$ROOT_DIR/skill/." "$TARGET_BASE/skills/solana-tx-landing/"
+mkdir -p "$TARGET_BASE/skills/solana-tx-landing/scripts"
+for script in "${RUNTIME_SCRIPTS[@]}"; do
+  cp "$ROOT_DIR/scripts/$script" "$TARGET_BASE/skills/solana-tx-landing/scripts/$script"
+done
 
 if [[ "$INSTALL_COMMANDS" -eq 1 ]]; then
   mkdir -p "$TARGET_BASE/commands"
@@ -98,3 +108,4 @@ fi
 
 echo "Installed."
 echo "Skill: $TARGET_BASE/skills/solana-tx-landing"
+echo "Scripts: $TARGET_BASE/skills/solana-tx-landing/scripts"

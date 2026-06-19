@@ -59,6 +59,8 @@ Install only the skill:
 
 The installer copies plain text files only. It does not download dependencies, execute remote code, or modify shell profiles.
 
+The runtime scanner scripts are installed into the skill folder at `skills/solana-tx-landing/scripts/`, so the installed skill remains usable without keeping a separate clone of this repository.
+
 ## Usage
 
 Ask the agent natural questions:
@@ -90,6 +92,18 @@ python3 scripts/scan_anchor_compute.py path/to/programs --format md
 python3 scripts/tx_landing_report.py path/to/repo --format md
 ```
 
+For CI, the TypeScript scanner can fail builds when findings meet a severity threshold:
+
+```bash
+python3 scripts/scan_ts_transactions.py path/to/app --fail-on high
+```
+
+To turn known findings into a remediation checklist without rewriting source files:
+
+```bash
+python3 scripts/scan_ts_transactions.py path/to/app --fix-plan
+```
+
 For a quick offline walkthrough, see `DEMO.md`.
 
 ## Validate
@@ -101,16 +115,6 @@ bash scripts/validate.sh
 ```
 
 The validator checks skill frontmatter/routing, Python script syntax, scanner fixture behavior, installer syntax, project-local install behavior, and absence of generated artifacts. The GitHub Actions workflow runs the same command on pushes and pull requests.
-
-## Publish
-
-After GitHub CLI authentication is working:
-
-```bash
-bash scripts/publish_github.sh
-```
-
-See `PUBLISHING.md` for manual publishing steps and private-review options.
 
 ## Current References
 

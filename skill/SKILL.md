@@ -33,13 +33,19 @@ Diagnose transaction landing as a production workflow, not as a single RPC error
 
 ## Scripts
 
-Run scripts from the repository root or by absolute path:
+Run scripts from the repository root or from the installed skill directory. If the skill was installed into `.agents`, the scripts live at `.agents/skills/solana-tx-landing/scripts/`.
 
 ```bash
 python3 scripts/scan_ts_transactions.py <repo-or-file> --format md
 python3 scripts/parse_simulation_logs.py <log-file> --format md
 python3 scripts/scan_anchor_compute.py <repo-or-file> --format md
 python3 scripts/tx_landing_report.py <repo> --format md
+```
+
+For CI gates, use `--fail-on` with the TypeScript scanner:
+
+```bash
+python3 scripts/scan_ts_transactions.py <repo> --fail-on high
 ```
 
 Use script output as evidence, not as a final answer by itself. Confirm findings against the source code because static scans are intentionally conservative.
@@ -53,4 +59,3 @@ Return:
 - Fix: exact code/config changes or a patch plan.
 - Verification: how to prove the fix, including local tests, devnet/surfpool checks, or observability.
 - Residual risk: what remains uncertain, especially if live RPC data was unavailable.
-

@@ -17,6 +17,8 @@ Primary sources:
 
 ## Good Client Shape
 
+Most existing codebases still use `@solana/web3.js`, so examples show that API first. For new code using `@solana/kit`, preserve the same invariants: fetch a fresh latest blockhash with context, sign close to send time, send with explicit options, and confirm using the blockhash plus last valid block height.
+
 ```ts
 const latest = await connection.getLatestBlockhash("confirmed");
 
@@ -46,6 +48,46 @@ await connection.confirmTransaction(
 ```
 
 `maxRetries: 0` is acceptable only if the app owns its own rebroadcast loop. If the app does not rebroadcast, let the RPC retry or implement a bounded resend loop.
+
+## @solana/kit Shape
+
+Use the v2 kit factories in new codebases, but keep the same lifecycle. Names vary slightly by installed kit version, so treat this as shape guidance and verify imports against the project lockfile.
+
+```ts
+import {
+  appendTransactionMessageInstruction,
+  createSolanaRpc,
+  createTransactionMessage,
+  pipe,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  signTransactionMessageWithSigners,
+} from "@solana/kit";
+
+const rpc = createSolanaRpc(rpcUrl);
+const latest = await rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+
+const message = pipe(
+  createTransactionMessage({ version: 0 }),
+  (tx) => setTransactionMessageFeePayerSigner(feePayer, tx),
+  (tx) => setTransactionMessageLifetimeUsingBlockhash(latest.value, tx),
+  (tx) => appendTransactionMessageInstruction(appInstruction, tx),
+);
+
+const signed = await signTransactionMessageWithSigners(message);
+const signature = await rpc.sendTransaction(signed, {
+  encoding: "base64",
+  preflightCommitment: "confirmed",
+}).send();
+
+await rpc
+  .confirmTransaction({
+    signature,
+    blockhash: latest.value.blockhash,
+    lastValidBlockHeight: latest.value.lastValidBlockHeight,
+  })
+  .send();
+```
 
 ## Blockhash Freshness Checklist
 
@@ -77,4 +119,3 @@ await connection.sendRawTransaction(raw, { skipPreflight: true });
 ```
 
 Skipping preflight during diagnosis removes the fastest way to distinguish program failure from landing failure.
-

@@ -96,7 +96,23 @@ Total findings: 13 (high: 5, medium: 5)
 
 The report gives a launch-review style summary that an agent can turn into code fixes, verification steps, and residual-risk notes.
 
-## 6. Use As An Agent Skill
+## 6. Use Scanner In CI
+
+```bash
+python3 scripts/scan_ts_transactions.py tests/fixtures/typescript --fail-on high
+```
+
+Expected exit code: `2`, because the risky fixture contains high-severity landing issues.
+
+## 7. Generate A Fix Plan
+
+```bash
+python3 scripts/scan_ts_transactions.py tests/fixtures/typescript --fix-plan
+```
+
+This prints targeted remediation steps for known anti-patterns such as discarded `lastValidBlockHeight`, signature-only confirmation, missing preflight commitment, and `skipPreflight: true`.
+
+## 8. Use As An Agent Skill
 
 Example prompts:
 

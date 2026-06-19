@@ -59,6 +59,13 @@ def window(lines: list[str], index: int, size: int = 6) -> str:
     return "\n".join(lines[index : min(len(lines), index + size)])
 
 
+def first_matching_line(lines: list[str], pattern: str) -> int:
+    for index, line in enumerate(lines, 1):
+        if re.search(pattern, line):
+            return index
+    return 1
+
+
 def has_rebroadcast_logic(text: str) -> bool:
     patterns = [
         r"while\s*\(",
@@ -78,7 +85,7 @@ def scan_file(path: Path, root: Path) -> list[Finding]:
     findings: list[Finding] = []
     file_label = rel(path, root)
     has_send = bool(re.search(r"\b(sendRawTransaction|sendTransaction|sendAndConfirmTransaction)\b", text))
-    has_compute_budget = "ComputeBudgetProgram" in text or "setComputeUnit" in text
+    has_compute_budget = bool(re.search(r"ComputeBudgetProgram|setComputeUnit|getSetComputeUnit", text))
     has_simulation = "simulateTransaction" in text
     rebroadcast = has_rebroadcast_logic(text)
 
@@ -102,7 +109,7 @@ def scan_file(path: Path, root: Path) -> list[Finding]:
                 "low",
                 "missing-compute-budget",
                 file_label,
-                1,
+                first_matching_line(lines, r"\b(sendRawTransaction|sendTransaction|sendAndConfirmTransaction)\b"),
                 "File sends transactions but does not reference ComputeBudgetProgram.",
                 "For production flows, simulate units consumed and set compute unit limit/price intentionally.",
             )
@@ -114,7 +121,7 @@ def scan_file(path: Path, root: Path) -> list[Finding]:
                 "high",
                 "missing-last-valid-block-height",
                 file_label,
-                1,
+                first_matching_line(lines, r"getLatestBlockhash"),
                 "getLatestBlockhash is used but lastValidBlockHeight is not referenced in this file.",
                 "Retain blockhash and lastValidBlockHeight together and use blockheight-based confirmation.",
             )
@@ -262,11 +269,71 @@ def render_markdown(findings: list[Finding]) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
+FIX_PLAN_BY_RULE = {
+    "discarded-last-valid-block-height": [
+        "Store the full getLatestBlockhash response instead of only `.blockhash`.",
+        "Use `latest.blockhash` when building the transaction message.",
+        "Pass `latest.lastValidBlockHeight` into blockheight-based confirmation.",
+    ],
+    "missing-last-valid-block-height": [
+        "Thread `{ blockhash, lastValidBlockHeight }` through the send/confirm lifecycle.",
+        "Replace signature-only confirmation with `{ signature, blockhash, lastValidBlockHeight }`.",
+    ],
+    "signature-only-confirmation": [
+        "Replace `confirmTransaction(signature)` with `confirmTransaction({ signature, blockhash, lastValidBlockHeight }, commitment)`.",
+        "Use the same commitment as blockhash fetch unless the code documents a different consistency policy.",
+    ],
+    "skip-preflight-true": [
+        "Set `skipPreflight: false` while diagnosing and for normal user transactions.",
+        "If preflight must be skipped for a latency path, add an explicit simulation or Jito bundle validation path before send.",
+    ],
+    "missing-preflight-commitment": [
+        "Add `preflightCommitment` to send options.",
+        "Match it to the commitment used by `getLatestBlockhash`, usually `confirmed`.",
+    ],
+    "max-retries-zero-without-loop": [
+        "Either remove `maxRetries: 0` and let the RPC retry, or add a bounded rebroadcast loop.",
+        "Stop rebroadcasting once the current block height exceeds `lastValidBlockHeight`.",
+    ],
+    "missing-compute-budget": [
+        "Simulate the transaction to collect `unitsConsumed`.",
+        "Prepend compute budget instructions with an explicit CU limit and CU price for production flows.",
+    ],
+    "public-rpc-endpoint": [
+        "Move RPC URLs into environment/configuration.",
+        "Use a production RPC provider with slot-lag monitoring and failover for sends.",
+    ],
+}
+
+
+def render_fix_plan(findings: list[Finding]) -> str:
+    actionable = [finding for finding in findings if finding.rule in FIX_PLAN_BY_RULE]
+    out = ["# TypeScript Tx Landing Fix Plan", ""]
+    if not actionable:
+        out.append("No known fix-plan rules matched. Review findings manually.")
+        return "\n".join(out)
+
+    for finding in sorted(actionable, key=lambda item: (-SEVERITY_ORDER[item.severity], item.path, item.line)):
+        out.extend(
+            [
+                f"## {finding.severity.upper()} - {finding.rule}",
+                "",
+                f"- Location: `{finding.path}:{finding.line}`",
+                f"- Evidence: `{finding.evidence}`",
+                "- Plan:",
+            ]
+        )
+        out.extend(f"  - {step}" for step in FIX_PLAN_BY_RULE[finding.rule])
+        out.append("")
+    return "\n".join(out).rstrip() + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("path", type=Path, help="File or directory to scan")
     parser.add_argument("--format", choices=["json", "md"], default="md")
     parser.add_argument("--fail-on", choices=["info", "low", "medium", "high"], help="Exit 2 if this severity or higher is found")
+    parser.add_argument("--fix-plan", action="store_true", help="Print a remediation plan for known findings instead of the normal scan report")
     args = parser.parse_args()
 
     root = args.path.resolve()
@@ -274,7 +341,9 @@ def main() -> int:
     for source_file in iter_source_files(root):
         findings.extend(scan_file(source_file, root))
 
-    if args.format == "json":
+    if args.fix_plan:
+        print(render_fix_plan(findings))
+    elif args.format == "json":
         print(json.dumps({"summary": summarize(findings), "findings": [asdict(item) for item in findings]}, indent=2))
     else:
         print(render_markdown(findings))
@@ -288,4 +357,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
