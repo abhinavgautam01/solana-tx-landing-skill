@@ -100,6 +100,16 @@ bash scripts/validate.sh
 
 The validator checks skill frontmatter/routing, Python script syntax, scanner fixture behavior, installer syntax, project-local install behavior, and absence of generated artifacts. The GitHub Actions workflow runs the same command on pushes and pull requests.
 
+## Publish
+
+After GitHub CLI authentication is working:
+
+```bash
+bash scripts/publish_github.sh
+```
+
+See `PUBLISHING.md` for manual publishing steps and private-review options.
+
 ## Current References
 
 The references are grounded in primary docs current as of June 19, 2026:
