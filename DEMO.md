@@ -175,11 +175,10 @@ Preview only. Re-run with --fix to apply.
 This keeps the repository fixtures unchanged while proving the `--fix` path.
 
 ```bash
-rm -rf /private/tmp/tx-demo-fix
-mkdir -p /private/tmp/tx-demo-fix
-cp tests/fixtures/typescript/risky.ts /private/tmp/tx-demo-fix/risky.ts
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/scan_ts_transactions.py /private/tmp/tx-demo-fix/risky.ts --fix
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/scan_ts_transactions.py /private/tmp/tx-demo-fix/risky.ts --format md
+mkdir -p /tmp/tx-demo-fix
+cp tests/fixtures/typescript/risky.ts /tmp/tx-demo-fix/risky.ts
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/scan_ts_transactions.py /tmp/tx-demo-fix/risky.ts --fix
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/scan_ts_transactions.py /tmp/tx-demo-fix/risky.ts --format md
 ```
 
 Actual after-scan output:
@@ -335,7 +334,27 @@ Total findings: 13 (high: 5, medium: 5)
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/scan_ts_transactions.py tests/fixtures/typescript --fail-on high
 ```
 
-Actual result: exits with code `2` because the risky fixture has high-severity findings. The command still prints the same markdown scan output shown in step 2, which makes the CI failure actionable.
+Actual output excerpt:
+
+```md
+# TypeScript Transaction Scan
+
+Total findings: 10 (max severity: high)
+
+## HIGH - missing-last-valid-block-height
+
+- Location: `risky.ts:11`
+- Evidence: `getLatestBlockhash is used but lastValidBlockHeight is not referenced in this file.`
+- Recommendation: Retain blockhash and lastValidBlockHeight together and use blockheight-based confirmation.
+
+## HIGH - signature-only-confirmation
+
+- Location: `risky.ts:20`
+- Evidence: `return connection.confirmTransaction(signature);`
+- Recommendation: Use confirmTransaction({ signature, blockhash, lastValidBlockHeight }, commitment).
+```
+
+Observed process exit code: `2`, because the risky fixture has high-severity findings. The command still prints actionable markdown, so CI logs point directly to the failing transaction patterns.
 
 ## 10. Diagnose Saved Transaction JSON
 
@@ -387,11 +406,11 @@ PYTHONDONTWRITEBYTECODE=1 python3 scripts/mcp_server.py --list-tools
 Actual tool names:
 
 ```text
-scan_ts_transactions
-parse_simulation_logs
-scan_anchor_compute
-tx_landing_report
-diagnose_signature_json
+scan_ts_transactions    - scan TypeScript/JavaScript Solana transaction code for landing risks
+parse_simulation_logs   - classify Solana simulation logs and RPC error text
+scan_anchor_compute     - scan Rust/Anchor programs for compute-heavy transaction risks
+tx_landing_report       - generate a local Solana transaction landing readiness report
+diagnose_signature_json - diagnose a saved getTransaction JSON response without network access
 ```
 
 The MCP server exposes the same offline scanners through stdio JSON-RPC for MCP-compatible agents.
