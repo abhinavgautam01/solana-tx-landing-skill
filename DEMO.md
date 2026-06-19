@@ -15,7 +15,7 @@ Expected result:
 [OK] Reference routing is complete
 [OK] Python scripts compile without bytecode artifacts
 [OK] Scanner fixtures produce expected findings
-[OK] Installer syntax and project-local install work
+[OK] Shell helper syntax and project-local install work
 [OK] No generated Python artifacts found
 [OK] Repository validation complete
 ```
@@ -113,4 +113,3 @@ Parse these simulation logs and tell me whether this is compute, blockhash, acco
 ```
 
 The skill routes from `skill/SKILL.md` to only the needed reference files, so the agent does not load every transaction-landing detail for every task.
-

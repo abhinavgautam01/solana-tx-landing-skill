@@ -33,11 +33,9 @@ bash scripts/validate.sh
 if git remote get-url origin >/dev/null 2>&1; then
   REMOTE_URL="$(git remote get-url origin)"
 else
-  gh repo create "$REPO_NAME" "--$VISIBILITY" --source . --remote origin --description "Claude Code / Codex skill for diagnosing and hardening Solana transaction landing flows." --push
+  gh repo create "$REPO_NAME" "--$VISIBILITY" --source . --remote origin --description "Claude Code / Codex skill for diagnosing and hardening Solana transaction landing flows."
   REMOTE_URL="$(git remote get-url origin)"
 fi
-
-git push -u origin main
 
 OWNER_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 PUBLIC_URL="https://github.com/${OWNER_REPO}"
@@ -53,6 +51,12 @@ text = text.replace("TODO: Add the public GitHub URL after pushing this reposito
 path.write_text(text, encoding="utf-8")
 PY
 
-echo "Published: $PUBLIC_URL"
-echo "Updated SUBMISSION.md with the repo URL. Review and commit that one-line update if desired."
+if [[ -n "$(git status --short SUBMISSION.md)" ]]; then
+  git add SUBMISSION.md
+  git commit -m "Add public submission URL"
+fi
 
+git push -u origin main
+
+echo "Published: $PUBLIC_URL"
+echo "SUBMISSION.md contains the public repo URL."

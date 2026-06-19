@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -126,12 +125,13 @@ def validate_scanners() -> None:
 
 def validate_installer() -> None:
     run(["bash", "-n", "install.sh"])
+    run(["bash", "-n", "scripts/publish_github.sh"])
     with tempfile.TemporaryDirectory(prefix="solana-tx-landing-install-") as tmp:
         run(["bash", "install.sh", "--agents", "--target", tmp, "-y"])
         installed = Path(tmp) / ".agents" / "skills" / "solana-tx-landing" / "SKILL.md"
         if not installed.exists():
             fail("Installer did not copy skill/SKILL.md into .agents")
-    ok("Installer syntax and project-local install work")
+    ok("Shell helper syntax and project-local install work")
 
 
 def validate_no_generated_artifacts() -> None:
@@ -154,4 +154,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
