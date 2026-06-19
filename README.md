@@ -90,6 +90,16 @@ python3 scripts/scan_anchor_compute.py path/to/programs --format md
 python3 scripts/tx_landing_report.py path/to/repo --format md
 ```
 
+## Validate
+
+Run the complete offline validation suite:
+
+```bash
+bash scripts/validate.sh
+```
+
+The validator checks skill frontmatter/routing, Python script syntax, scanner fixture behavior, installer syntax, project-local install behavior, and absence of generated artifacts. The GitHub Actions workflow runs the same command on pushes and pull requests.
+
 ## Current References
 
 The references are grounded in primary docs current as of June 19, 2026:
@@ -108,4 +118,3 @@ The references are grounded in primary docs current as of June 19, 2026:
 - Deterministic checks: scripts emit JSON or Markdown and do not require network access.
 - Safe defaults: no private key handling, no signing, no sending transactions.
 - Merge fit: MIT licensed, shell installer, plain Markdown commands/agents/rules.
-
