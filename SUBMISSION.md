@@ -2,7 +2,7 @@
 
 ## Repo / PR Link
 
-TODO: Add the public GitHub URL after pushing this repository.
+https://github.com/abhinavgautam01/solana-tx-landing-skill
 
 Suggested repo name:
 
