@@ -1,0 +1,7 @@
+interface:
+  display_name: "Solana Tx Landing"
+  short_description: "Diagnose and harden Solana transaction landing."
+  default_prompt: "Use $solana-tx-landing to diagnose why my Solana transaction fails, expires, or lands slowly, then propose concrete fixes."
+policy:
+  allow_implicit_invocation: true
+

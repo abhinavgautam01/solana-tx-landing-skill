@@ -1,0 +1,7 @@
+Program 11111111111111111111111111111111 invoke [1]
+Program log: Instruction: Swap
+Program log: custom program error: 0x1771
+Program consumption: 389000 units remaining
+Error: Transaction simulation failed: Blockhash not found
+unitsConsumed: 420000
+
