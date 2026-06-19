@@ -90,6 +90,8 @@ python3 scripts/scan_anchor_compute.py path/to/programs --format md
 python3 scripts/tx_landing_report.py path/to/repo --format md
 ```
 
+For a quick offline walkthrough, see `DEMO.md`.
+
 ## Validate
 
 Run the complete offline validation suite:

@@ -45,6 +45,7 @@ This skill gives coding agents a transaction-landing operating model. It routes 
   - `scan_anchor_compute.py`
   - `tx_landing_report.py`
 - Test fixtures and `scripts/validate.sh`
+- Offline demo walkthrough in `DEMO.md`
 - GitHub Actions validation workflow
 - MIT license and installer
 
@@ -69,4 +70,3 @@ Expected result:
 ## License
 
 MIT
-
