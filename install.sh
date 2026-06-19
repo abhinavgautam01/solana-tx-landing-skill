@@ -9,6 +9,8 @@ INSTALL_RULES=1
 AGENTS_MODE=0
 YES=0
 RUNTIME_SCRIPTS=(
+  diagnose_signature.py
+  mcp_server.py
   parse_simulation_logs.py
   scan_anchor_compute.py
   scan_ts_transactions.py

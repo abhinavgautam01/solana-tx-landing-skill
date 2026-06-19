@@ -88,6 +88,7 @@ Deterministic scripts:
 ```bash
 python3 scripts/scan_ts_transactions.py path/to/app --format md
 python3 scripts/parse_simulation_logs.py path/to/simulation.log --format md
+python3 scripts/diagnose_signature.py --from-json path/to/get-transaction.json --format md
 python3 scripts/scan_anchor_compute.py path/to/programs --format md
 python3 scripts/tx_landing_report.py path/to/repo --format md
 ```
@@ -102,6 +103,25 @@ To turn known findings into a remediation checklist without rewriting source fil
 
 ```bash
 python3 scripts/scan_ts_transactions.py path/to/app --fix-plan
+```
+
+To preview or apply conservative source edits for simple known anti-patterns:
+
+```bash
+python3 scripts/scan_ts_transactions.py path/to/app --patch
+python3 scripts/scan_ts_transactions.py path/to/app --fix
+```
+
+For optional live, read-only signature diagnosis, pass an RPC URL explicitly:
+
+```bash
+python3 scripts/diagnose_signature.py <signature> --rpc https://api.mainnet-beta.solana.com
+```
+
+The MCP server exposes the offline scanners to MCP-compatible clients:
+
+```bash
+python3 scripts/mcp_server.py
 ```
 
 For a quick offline walkthrough, see `DEMO.md`.

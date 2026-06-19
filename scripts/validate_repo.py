@@ -114,6 +114,18 @@ def validate_scanners() -> None:
     if "signature-only-confirmation" not in fix_plan.stdout or "lastValidBlockHeight" not in fix_plan.stdout:
         fail("TypeScript scanner fix plan did not include expected remediation steps")
 
+    patch = run(["python3", "scripts/scan_ts_transactions.py", "tests/fixtures/typescript/risky.ts", "--patch"])
+    if "preflightCommitment" not in patch.stdout or "latestBlockhash" not in patch.stdout:
+        fail("TypeScript scanner patch preview did not include expected fixes")
+
+    with tempfile.TemporaryDirectory(prefix="solana-tx-fix-") as tmp:
+        target = Path(tmp) / "risky.ts"
+        target.write_text((ROOT / "tests" / "fixtures" / "typescript" / "risky.ts").read_text(encoding="utf-8"), encoding="utf-8")
+        run(["python3", "scripts/scan_ts_transactions.py", str(target), "--fix"])
+        fixed = json.loads(run(["python3", "scripts/scan_ts_transactions.py", str(target), "--format", "json"]).stdout)
+        if fixed["summary"]["counts"]["high"] != 0:
+            fail("TypeScript scanner --fix should remove high-severity fixture findings")
+
     logs = run(["python3", "scripts/parse_simulation_logs.py", "tests/fixtures/logs/simulation.log", "--format", "json"])
     log_categories = {finding["category"] for finding in json.loads(logs.stdout)["findings"]}
     for category in {"blockhash", "custom-program-error", "units-consumed"}:
@@ -129,6 +141,25 @@ def validate_scanners() -> None:
     report = json.loads(combined.stdout)
     if report["verdict"] != "Not ready":
         fail("Combined fixture report should be Not ready")
+
+    signature = run(["python3", "scripts/diagnose_signature.py", "--from-json", "tests/fixtures/rpc/get_transaction_failed.json", "--format", "json"])
+    signature_report = json.loads(signature.stdout)
+    if "compute" not in signature_report["verdict"]:
+        fail("Signature diagnoser did not classify fixture as compute-related")
+
+    mcp_tools = run(["python3", "scripts/mcp_server.py", "--list-tools"])
+    if "scan_ts_transactions" not in mcp_tools.stdout or "diagnose_signature_json" not in mcp_tools.stdout:
+        fail("MCP server did not list expected tools")
+
+    mcp_call = run(
+        [
+            "bash",
+            "-lc",
+            "printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"scan_ts_transactions\",\"arguments\":{\"path\":\"tests/fixtures/typescript/risky.ts\",\"format\":\"json\"}}}' | PYTHONDONTWRITEBYTECODE=1 python3 scripts/mcp_server.py --line-mode",
+        ]
+    )
+    if "signature-only-confirmation" not in mcp_call.stdout:
+        fail("MCP server scanner call did not return expected finding")
     ok("Scanner fixtures produce expected findings")
 
 
@@ -141,6 +172,8 @@ def validate_installer() -> None:
         if not (skill_dir / "SKILL.md").exists():
             fail("Installer did not copy skill/SKILL.md into .agents")
         for script in {
+            "diagnose_signature.py",
+            "mcp_server.py",
             "parse_simulation_logs.py",
             "scan_anchor_compute.py",
             "scan_ts_transactions.py",

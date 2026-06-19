@@ -24,7 +24,16 @@ Accept any of:
 
    If installed into `.agents`, use `.agents/skills/solana-tx-landing/scripts/parse_simulation_logs.py`.
 
-4. If source is provided, run:
+4. If a signature or saved `getTransaction` JSON is provided, run:
+
+   ```bash
+   python3 scripts/diagnose_signature.py <signature> --rpc <rpc-url> --format md
+   python3 scripts/diagnose_signature.py --from-json <get-transaction.json> --format md
+   ```
+
+   Prefer `--from-json` for offline review. If installed into `.agents`, use `.agents/skills/solana-tx-landing/scripts/diagnose_signature.py`.
+
+5. If source is provided, run:
 
    ```bash
    python3 scripts/scan_ts_transactions.py <path> --format md
@@ -33,7 +42,7 @@ Accept any of:
 
    If installed into `.agents`, use the copies under `.agents/skills/solana-tx-landing/scripts/`.
 
-5. Reconstruct the transaction lifecycle:
+6. Reconstruct the transaction lifecycle:
    - blockhash fetch
    - message construction
    - simulation

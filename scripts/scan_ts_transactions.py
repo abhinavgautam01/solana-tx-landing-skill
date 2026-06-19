@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import re
 from dataclasses import asdict, dataclass
@@ -328,15 +329,129 @@ def render_fix_plan(findings: list[Finding]) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
+def patch_source(text: str) -> tuple[str, list[str]]:
+    """Patch only simple, high-confidence transaction landing anti-patterns."""
+    changed = text
+    notes: list[str] = []
+
+    blockhash_pattern = re.compile(
+        r"^(?P<indent>[ \t]*)(?P<tx>[A-Za-z_$][\w$]*)\.recentBlockhash = "
+        r"\(await (?P<connection>[A-Za-z_$][\w$]*)\.getLatestBlockhash\(\)\)\.blockhash;\s*$",
+        re.MULTILINE,
+    )
+
+    def replace_blockhash(match: re.Match[str]) -> str:
+        notes.append("Expanded getLatestBlockhash().blockhash into a latestBlockhash object with explicit confirmed commitment.")
+        indent = match.group("indent")
+        tx = match.group("tx")
+        connection = match.group("connection")
+        return (
+            f'{indent}const latestBlockhash = await {connection}.getLatestBlockhash("confirmed");\n'
+            f"{indent}{tx}.recentBlockhash = latestBlockhash.blockhash;"
+        )
+
+    changed = blockhash_pattern.sub(replace_blockhash, changed)
+
+    if "skipPreflight: true" in changed:
+        changed = re.sub(r"skipPreflight\s*:\s*true", "skipPreflight: false", changed)
+        notes.append("Changed skipPreflight: true to skipPreflight: false.")
+
+    lines = changed.splitlines()
+    patched_lines: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        patched_lines.append(line)
+        if "skipPreflight: false" in line:
+            lookahead = lines[index + 1 : min(len(lines), index + 6)]
+            if not any("preflightCommitment" in item for item in lookahead) and any("}" in item for item in lookahead):
+                indent_match = re.match(r"([ \t]*)", line)
+                indent = indent_match.group(1) if indent_match else "    "
+                patched_lines.append(f'{indent}preflightCommitment: "confirmed",')
+                notes.append("Added preflightCommitment: confirmed to send options.")
+        index += 1
+    changed = "\n".join(patched_lines) + ("\n" if changed.endswith("\n") else "")
+
+    if "latestBlockhash" in changed:
+        confirm_pattern = re.compile(
+            r"^(?P<indent>[ \t]*)return (?P<connection>[A-Za-z_$][\w$]*)\.confirmTransaction\((?P<signature>[A-Za-z_$][\w$]*)\);\s*$",
+            re.MULTILINE,
+        )
+
+        def replace_confirm(match: re.Match[str]) -> str:
+            notes.append("Replaced signature-only confirmation with blockheight-based confirmation.")
+            indent = match.group("indent")
+            connection = match.group("connection")
+            signature = match.group("signature")
+            inner = indent + "  "
+            return (
+                f"{indent}return {connection}.confirmTransaction(\n"
+                f"{inner}{{\n"
+                f"{inner}  signature: {signature},\n"
+                f"{inner}  blockhash: latestBlockhash.blockhash,\n"
+                f"{inner}  lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,\n"
+                f"{inner}}},\n"
+                f'{inner}"confirmed",\n'
+                f"{indent});"
+            )
+
+        changed = confirm_pattern.sub(replace_confirm, changed)
+
+    return changed, notes
+
+
+def patch_files(root: Path, apply: bool) -> tuple[list[str], list[str]]:
+    patches: list[str] = []
+    notes: list[str] = []
+    for source_file in iter_source_files(root):
+        original = source_file.read_text(encoding="utf-8", errors="ignore")
+        patched, file_notes = patch_source(original)
+        if patched == original:
+            continue
+        label = rel(source_file, root)
+        patches.append(
+            "".join(
+                difflib.unified_diff(
+                    original.splitlines(keepends=True),
+                    patched.splitlines(keepends=True),
+                    fromfile=f"a/{label}",
+                    tofile=f"b/{label}",
+                )
+            )
+        )
+        notes.extend(f"{label}: {note}" for note in file_notes)
+        if apply:
+            source_file.write_text(patched, encoding="utf-8")
+    return patches, notes
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("path", type=Path, help="File or directory to scan")
     parser.add_argument("--format", choices=["json", "md"], default="md")
     parser.add_argument("--fail-on", choices=["info", "low", "medium", "high"], help="Exit 2 if this severity or higher is found")
     parser.add_argument("--fix-plan", action="store_true", help="Print a remediation plan for known findings instead of the normal scan report")
+    parser.add_argument("--patch", action="store_true", help="Print a unified diff for simple high-confidence fixes without modifying files")
+    parser.add_argument("--fix", action="store_true", help="Apply simple high-confidence fixes in place")
     args = parser.parse_args()
 
     root = args.path.resolve()
+    if args.patch or args.fix:
+        patches, notes = patch_files(root, apply=args.fix)
+        if args.format == "json":
+            print(json.dumps({"applied": args.fix, "changed_files": len(patches), "notes": notes, "patch": patches}, indent=2))
+        else:
+            if notes:
+                print("# TypeScript Tx Landing Patch")
+                print("")
+                print("Applied." if args.fix else "Preview only. Re-run with --fix to apply.")
+                print("")
+                for note in notes:
+                    print(f"- {note}")
+                print("")
+            print("\n".join(patches) if patches else "No high-confidence automatic fixes available.")
+        return 0
+
     findings: list[Finding] = []
     for source_file in iter_source_files(root):
         findings.extend(scan_file(source_file, root))

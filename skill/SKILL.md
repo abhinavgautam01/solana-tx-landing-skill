@@ -1,6 +1,6 @@
 ---
 name: solana-tx-landing
-description: Diagnose and harden Solana transaction landing flows. Use when Codex needs to investigate failed, expired, slow, dropped, or inconsistently confirmed Solana transactions; tune blockhash, commitment, preflight, retry, RPC failover, priority fee, compute budget, wallet signing, versioned transaction, address lookup table, Jito bundle, or simulation-log workflows; or generate a mainnet transaction landing readiness report for a Solana app.
+description: Diagnose and harden Solana transaction landing flows. Use when Codex needs to investigate failed, expired, slow, dropped, or inconsistently confirmed Solana transactions; analyze transaction signatures or simulation logs; tune blockhash, commitment, preflight, retry, RPC failover, priority fee, compute budget, wallet signing, versioned transaction, address lookup table, or Jito bundle workflows; or generate a mainnet transaction landing readiness report for a Solana app.
 ---
 
 # Solana Tx Landing
@@ -12,6 +12,7 @@ Diagnose transaction landing as a production workflow, not as a single RPC error
 1. Classify the input.
    - Failed signature or explorer link: inspect status, logs, slot timing, and whether the client has matching source.
    - Simulation logs: read `references/simulation-logs.md`.
+   - Transaction signature or saved `getTransaction` JSON: run `scripts/diagnose_signature.py`, then read `references/simulation-logs.md`.
    - TypeScript/frontend/backend transaction code: run `scripts/scan_ts_transactions.py`, then read the relevant references.
    - Anchor/Rust program compute concern: run `scripts/scan_anchor_compute.py`, then read `references/priority-fees-and-compute.md`.
    - Launch readiness request: run `scripts/tx_landing_report.py`, then read `references/mainnet-readiness.md`.
@@ -38,14 +39,23 @@ Run scripts from the repository root or from the installed skill directory. If t
 ```bash
 python3 scripts/scan_ts_transactions.py <repo-or-file> --format md
 python3 scripts/parse_simulation_logs.py <log-file> --format md
+python3 scripts/diagnose_signature.py <signature> --rpc <rpc-url> --format md
+python3 scripts/diagnose_signature.py --from-json <get-transaction.json> --format md
 python3 scripts/scan_anchor_compute.py <repo-or-file> --format md
 python3 scripts/tx_landing_report.py <repo> --format md
+python3 scripts/mcp_server.py
 ```
 
 For CI gates, use `--fail-on` with the TypeScript scanner:
 
 ```bash
 python3 scripts/scan_ts_transactions.py <repo> --fail-on high
+```
+
+For conservative code edits, preview with `--patch` before applying `--fix`:
+
+```bash
+python3 scripts/scan_ts_transactions.py <repo> --patch
 ```
 
 Use script output as evidence, not as a final answer by itself. Confirm findings against the source code because static scans are intentionally conservative.

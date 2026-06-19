@@ -112,7 +112,31 @@ python3 scripts/scan_ts_transactions.py tests/fixtures/typescript --fix-plan
 
 This prints targeted remediation steps for known anti-patterns such as discarded `lastValidBlockHeight`, signature-only confirmation, missing preflight commitment, and `skipPreflight: true`.
 
-## 8. Use As An Agent Skill
+## 8. Preview Conservative Patches
+
+```bash
+python3 scripts/scan_ts_transactions.py tests/fixtures/typescript/risky.ts --patch
+```
+
+This prints a unified diff for simple high-confidence fixes. Re-run with `--fix` only after reviewing the patch.
+
+## 9. Diagnose Saved Transaction JSON
+
+```bash
+python3 scripts/diagnose_signature.py --from-json tests/fixtures/rpc/get_transaction_failed.json --format md
+```
+
+This classifies the saved failed transaction as a compute-budget failure without making any RPC calls.
+
+## 10. List MCP Tools
+
+```bash
+python3 scripts/mcp_server.py --list-tools
+```
+
+The MCP server exposes offline scanners through stdio JSON-RPC for MCP-compatible agents.
+
+## 11. Use As An Agent Skill
 
 Example prompts:
 

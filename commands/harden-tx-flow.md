@@ -10,9 +10,10 @@ Patch or design a production-grade Solana transaction send/confirm flow.
 
    ```bash
    python3 scripts/scan_ts_transactions.py <repo> --format md
+   python3 scripts/scan_ts_transactions.py <repo> --patch
    ```
 
-   If installed into `.agents`, use `.agents/skills/solana-tx-landing/scripts/scan_ts_transactions.py`.
+   Use `--patch` to preview conservative automatic fixes. Use `--fix` only after reviewing the diff. If installed into `.agents`, use `.agents/skills/solana-tx-landing/scripts/scan_ts_transactions.py`.
 
 4. Read only the references needed by the findings:
    - blockhash/confirmation issues: `skill/references/blockhash-and-confirmation.md`
